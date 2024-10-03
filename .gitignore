@@ -12,3 +12,5 @@ creditcard_2023.csv
 # Ignore IDE specific folder
 .idea/
 /__pycache__/
+**/.DS_Store
+__pycache__/
