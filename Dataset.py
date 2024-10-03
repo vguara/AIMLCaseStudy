@@ -1,12 +1,17 @@
 import random
 import pandas as pd
+from openpyxl.utils.dataframe import dataframe_to_rows
+
 
 class Dataset:
     def __init__(self, DSpath):
         self.data = pd.read_csv(DSpath)
-        self.fraud_rate = self.define_fraud_rate(self.data)
+        self.fraud_rate = Dataset.define_fraud_rate(self.data)
+        self.subsets = {}
+        self.validation_sets = {}
 
-    def define_fraud_rate(self, data):
+    @staticmethod
+    def define_fraud_rate(data):
         # Define the fraud rate of a dataset
         # can be used for the whole dataset or for each 
 
@@ -37,3 +42,26 @@ class Dataset:
         else: # otherwise all features included
             self.train_features = self.train_data.drop(label, axis=1, inplace=False)
             self.test_features = self.test_data.drop(label, axis=1, inplace=False)
+
+    def create_cross_validation_subsets(self, k=5, keep_fraud_ratio=False):
+
+        if not keep_fraud_ratio:
+            for ratio, df in self.subsets.items():
+                total_rows = df.shape[0]
+                rows_k = int(total_rows/k)
+                self.validation_sets[ratio] = []
+                for j in range(0, total_rows, rows_k):
+                    df_split = df.iloc[j:j+rows_k]
+                    self.validation_sets[ratio].append(df_split)
+        else:
+            for ratio, df in self.subsets.items():
+                fraud_cases = df[df['Class'] == 1]
+                non_fraud_cases = df[df['Class'] == 0]
+                total_rows = non_fraud_cases.shape[0]
+                rows_k = int(total_rows/k)
+                self.validation_sets[ratio] = []
+                for j in range(0, total_rows, rows_k):
+                    non_fraud_df_split = non_fraud_cases.iloc[j:j+rows_k]
+                    df_concat = pd.concat([non_fraud_df_split, fraud_cases])
+                    self.validation_sets[ratio].append(df_concat)
+
