@@ -10,3 +10,5 @@
 creditcard.csv
 # Ignore IDE specific folder
 .idea/
+
+__pycache__/
