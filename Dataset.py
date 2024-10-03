@@ -6,8 +6,9 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 class Dataset:
     def __init__(self, DSpath):
         self.data = pd.read_csv(DSpath)
-        self.fraud_rate = self.define_fraud_rate(self.data)
+        self.fraud_rate = Dataset.define_fraud_rate(self.data)
         self.subsets = {}
+        self.validation_sets = {}
 
     def create_subsets(self, ratios, seed=None):
         '''
@@ -42,11 +43,6 @@ class Dataset:
             # Store the subset in the dictionary with the ratio as the key
             self.subsets[ratio] = subset_df
 
-
-
-        self.fraud_rate = Dataset.define_fraud_rate(self.data)
-        self.subsets = {}
-        self.validation_sets = {}
 
     @staticmethod
     def define_fraud_rate(data):
