@@ -6,16 +6,19 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 class Dataset:
     def __init__(self, DSpath):
         self.data = pd.read_csv(DSpath)
-        self.fraud_rate = self.define_fraud_rate(self.data)
+        self.fraud_rate = Dataset.define_fraud_rate(self.data)
         self.subsets = {}
+        self.validation_sets = {}
+        self.train_data = None
+        self.test_data = None
 
     def create_subsets(self, ratios, seed=None):
         '''
         Populates the subset attribute with subsets of the data for each given ratio.
         :param ratios: a list of ratios of fraud data over total data
         '''
-        class_1_df = self.data[self.data['Class'] == 1]
-        class_0_df = self.data[self.data['Class'] == 0]
+        class_1_df = self.train_data[self.train_data['Class'] == 1]
+        class_0_df = self.train_data[self.train_data['Class'] == 0]
 
         # Generate subsets for each ratio
         for ratio in ratios:
@@ -33,7 +36,7 @@ class Dataset:
 
             else:  # Fraud rate matches the desired ratio
                 # No sampling needed, use the full dataset
-                subset_df = self.data.copy()
+                subset_df = self.train_data.copy()
 
             # Ensure the total rows in subset match expected rows
             subset_size = target_class_1_count + target_class_0_count
@@ -42,11 +45,6 @@ class Dataset:
             # Store the subset in the dictionary with the ratio as the key
             self.subsets[ratio] = subset_df
 
-
-
-        self.fraud_rate = Dataset.define_fraud_rate(self.data)
-        self.subsets = {}
-        self.validation_sets = {}
 
     @staticmethod
     def define_fraud_rate(data):
