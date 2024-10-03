@@ -4,8 +4,16 @@ import pandas as pd
 class Dataset:
     def __init__(self, DSpath):
         self.data = pd.read_csv(DSpath)
-        self.train_set_size = 0
+        self.fraud_rate = self.define_fraud_rate(self.data)
 
+    def define_fraud_rate(self, data):
+        # Define the fraud rate of a dataset
+        # can be used for the whole dataset or for each 
+
+        num_rows = data.shape[0]
+        label = data.iloc[:'Class']
+        fraud_count = (label == 1).sum()
+        return fraud_count/num_rows
 
     def create_train_test(self, ratio, seed=None):
         num_rows = self.data.shape[0]
