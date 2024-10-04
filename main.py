@@ -12,7 +12,7 @@ from measures import measures
 
 ds = Dataset('creditcard.csv')
 # models = ['LR','SVM','RF']
-models = ['RF']
+models = ['SVM']
 
 # Create train and test sets with a 70/30 split
 ds.create_train_test(ratio=0.7, seed=42)
@@ -27,31 +27,17 @@ y_train, y_test = ds.train_label, ds.test_label
 for model in models:
     if model == 'LR':
         model_trained = LogisticRegression()
-        model_trained.fit(ds.train_features, ds.train_label)  # Train the model using training features and labels
-
-        y_pred = model_trained.predict(ds.test_features)
     elif model == 'SVM':
-        model_trained = SVC(kernel='rbf', C=1.0, gamma='scale')
-        model_trained.fit(ds.train_features, ds.train_label)  # Train the model using training features and labels
-
-        y_pred = model_trained.predict(ds.test_features)
+        model_trained = SVC(kernel='rbf', C=1.0, gamma='scale',probability=True)
     elif model == 'RF':
         # Train a Random Forest model
         model_trained = RandomForestClassifier(n_estimators=100, random_state=42)
-        model_trained.fit(X_train, y_train)
 
-        # Make predictions and evaluate the model
-        y_pred = model_trained.predict(X_test)
-    else:
-        print('Invalid model')
-    performance = measures(y_test, y_pred)
-    # conf_matrix = confusion_matrix(y_test, y_pred)
-    #
-    # print("Confusion Matrix:")
-    # print(conf_matrix)
-    #
-    # print("\nClassification Report:")
-    # print(classification_report(y_test, y_pred))
-    #
-    # print("\nAccuracy Score:")
-    # print(accuracy_score(y_test, y_pred))
+    model_trained.fit(X_train, y_train)
+
+    # Make predictions and evaluate the model
+    y_pred = model_trained.predict(X_test)
+    y_prob = model_trained.predict_proba(X_test)[:, 1]
+    performance = measures(y_test, y_pred, y_prob)
+    print(performance)
+
