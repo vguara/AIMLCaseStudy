@@ -8,6 +8,7 @@
 /dataSources.local.xml
 # Datasource
 creditcard.csv
+creditcard_2023.csv
 # Ignore IDE specific folder
 .idea/
 /__pycache__/

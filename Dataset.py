@@ -1,6 +1,7 @@
 import random
 import pandas as pd
 from openpyxl.utils.dataframe import dataframe_to_rows
+from sklearn.utils import resample
 
 
 class Dataset:
@@ -78,6 +79,34 @@ class Dataset:
         else: # otherwise all features included
             self.train_features = self.train_data.drop(label, axis=1, inplace=False)
             self.test_features = self.test_data.drop(label, axis=1, inplace=False)
+
+    def reduce_test_data_ratio(self, ratio, seed=None):
+        if self.test_data is None:
+            print("No test data")
+            return
+        #Separate fraud from nonfraud
+        fraud_data = self.test_data[self.test_data['Class'] == 1]
+        non_fraud_data = self.test_data[self.test_data['Class'] == 0]
+
+
+        current_ratio = len(fraud_data) / len(self.test_data)
+        if current_ratio < ratio:
+            print(f"cannot reduce test data ratio. current ratio: {current_ratio}")
+            return
+
+
+        fraud_desired = int((ratio / (1-ratio)) * len(non_fraud_data))
+
+        new_fraud_data = resample(fraud_data, replace=False, n_samples=fraud_desired, random_state=seed)
+
+        new_test_data = pd.concat([new_fraud_data, non_fraud_data])
+        new_test_data = new_test_data.sample(frac=1, random_state=seed).reset_index(drop=True)
+        print(f"Old test data - fraud size: {len(fraud_data)}, ratio {current_ratio}")
+        self.test_data = new_test_data
+        new_ratio = len(new_fraud_data)/len(self.test_data)
+        print(f"New test data - fraud size: {len(new_fraud_data)}, ratio {new_ratio}")
+
+
 
     def create_cross_validation_subsets(self, k=5, keep_fraud_ratio=False):
 

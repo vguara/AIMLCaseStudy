@@ -17,7 +17,11 @@ ds.define_label_features(label='Class')
 ## Using the model from sklearn
 # They mentioned all 3 common kernel function in the article: 'RBF', 'linear' and 'poly'
 # But I couldn't find the one they have actually used
-model = SVC(kernel='rbf', C=1.0, gamma='scale')
+model = SVC(kernel='rbf', C=10, gamma=0.00000001)
+variance = ds.train_features.var().mean()
+n_features = ds.train_features.shape[1]
+gamma = 1 / (n_features * variance)
+print(f"gamma : {gamma}")
 model.fit(ds.train_features, ds.train_label)  # Train the model using training features and labels
 
 test_predictions = model.predict(ds.test_features)
