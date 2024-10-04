@@ -1,7 +1,7 @@
 import random
 import pandas as pd
-from openpyxl.utils.dataframe import dataframe_to_rows
 from sklearn.utils import resample
+from sklearn.model_selection import GridSearchCV
 
 
 class Dataset:
@@ -129,4 +129,49 @@ class Dataset:
                     non_fraud_df_split = non_fraud_cases.iloc[j:j+rows_k]
                     df_concat = pd.concat([non_fraud_df_split, fraud_cases])
                     self.validation_sets[ratio].append(df_concat)
+
+
+
+####
+
+def find_best_model(model, param_grid, cv, scoring, training_features, training_labels):
+    """
+    Perform cross-validation to find the best model.
+
+    Parameters:
+    model (estimator): The machine learning model to be optimized.
+    param_grid (dict): The parameter grid to search over.
+    cv (int): The number of folds for cross-validation. the k-fold cross validation is done for each parameter grid.
+    scoring (str): The scoring method to evaluate the model.
+    training_features: Training data features.
+    training_labels: Training data labels.
+
+    Returns:
+    best_model (estimator): The best model found by GridSearchCV.
+    best_params (dict): The best parameters found by GridSearchCV.
+    best_score (float): The best score achieved by the best model.
+
+    Example parameters:
+    model = SVC()
+    param_grid = {
+        'C': [0.1, 1, 10, 100],
+    }
+    scoring = 'accuracy'
+    cv = 5
+
+
+    """
+
+
+
+
+
+    grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=cv, scoring=scoring)
+    grid_search.fit(training_features, training_labels)
+
+    best_model = grid_search.best_estimator_
+    best_params = grid_search.best_params_
+    best_score = grid_search.best_score_
+
+    return best_model, best_params, best_score
 
