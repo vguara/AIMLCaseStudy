@@ -70,6 +70,31 @@ class Dataset:
         self.train_data = self.data.iloc[train_indices]
         self.test_data = self.data.iloc[test_indices]
 
+    def create_train_test_set_fraud(self, ratio, fraud_data_ratio, seed=None):
+        fraud_data = self.data[self.data['Class'] == 1]
+        legit_data = self.data[self.data['Class'] == 0]
+
+        #split fraud data
+        rows_fraud = fraud_data.shape[0]
+        fraud_data_train_rows = int(rows_fraud * fraud_data_ratio)
+        fraud_data_train = fraud_data.iloc[:fraud_data_train_rows]
+        fraud_data_test = fraud_data.iloc[fraud_data_train_rows:]
+
+        #split non-fraud
+        rows_legit = legit_data.shape[0]
+        legit_data_train_rows = int(rows_legit * ratio)
+        legit_data_train = legit_data.iloc[:legit_data_train_rows]
+        legit_data_test = legit_data.iloc[legit_data_train_rows:]
+
+        # Combine both
+        train_data_sorted = pd.concat([fraud_data_train, legit_data_train])
+        test_data_sorted = pd.concat([fraud_data_test, legit_data_test])
+
+        # Shuffle the datasets
+        self.train_data = train_data_sorted.sample(frac=1, random_state=seed).reset_index(drop=True)
+        self.test_data = test_data_sorted.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+
     def define_label_features(self, label, features=None):
         self.train_label = self.train_data.loc[:,label]
         self.test_label = self.test_data.loc[:,label]
@@ -108,27 +133,27 @@ class Dataset:
 
 
 
-    def create_cross_validation_subsets(self, k=5, keep_fraud_ratio=False):
-
-        if not keep_fraud_ratio:
-            for ratio, df in self.subsets.items():
-                total_rows = df.shape[0]
-                rows_k = int(total_rows/k)
-                self.validation_sets[ratio] = []
-                for j in range(0, total_rows, rows_k):
-                    df_split = df.iloc[j:j+rows_k]
-                    self.validation_sets[ratio].append(df_split)
-        else:
-            for ratio, df in self.subsets.items():
-                fraud_cases = df[df['Class'] == 1]
-                non_fraud_cases = df[df['Class'] == 0]
-                total_rows = non_fraud_cases.shape[0]
-                rows_k = int(total_rows/k)
-                self.validation_sets[ratio] = []
-                for j in range(0, total_rows, rows_k):
-                    non_fraud_df_split = non_fraud_cases.iloc[j:j+rows_k]
-                    df_concat = pd.concat([non_fraud_df_split, fraud_cases])
-                    self.validation_sets[ratio].append(df_concat)
+    # def create_cross_validation_subsets(self, k=5, keep_fraud_ratio=False):
+    #
+    #     if not keep_fraud_ratio:
+    #         for ratio, df in self.subsets.items():
+    #             total_rows = df.shape[0]
+    #             rows_k = int(total_rows/k)
+    #             self.validation_sets[ratio] = []
+    #             for j in range(0, total_rows, rows_k):
+    #                 df_split = df.iloc[j:j+rows_k]
+    #                 self.validation_sets[ratio].append(df_split)
+    #     else:
+    #         for ratio, df in self.subsets.items():
+    #             fraud_cases = df[df['Class'] == 1]
+    #             non_fraud_cases = df[df['Class'] == 0]
+    #             total_rows = non_fraud_cases.shape[0]
+    #             rows_k = int(total_rows/k)
+    #             self.validation_sets[ratio] = []
+    #             for j in range(0, total_rows, rows_k):
+    #                 non_fraud_df_split = non_fraud_cases.iloc[j:j+rows_k]
+    #                 df_concat = pd.concat([non_fraud_df_split, fraud_cases])
+    #                 self.validation_sets[ratio].append(df_concat)
 
 
 
@@ -161,9 +186,6 @@ def find_best_model(model, param_grid, cv, scoring, training_features, training_
 
 
     """
-
-
-
 
 
     grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=cv, scoring=scoring)
