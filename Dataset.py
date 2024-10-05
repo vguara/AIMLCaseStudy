@@ -9,7 +9,7 @@ class Dataset:
         self.data = pd.read_csv(DSpath)
         self.fraud_rate = Dataset.define_fraud_rate(self.data)
         self.subsets = {}
-        self.validation_sets = {}
+        # self.validation_sets = {}
         self.train_data = None
         self.test_data = None
 
@@ -43,8 +43,10 @@ class Dataset:
             subset_size = target_class_1_count + target_class_0_count
             subset_df = subset_df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
+            # Call function to split feature from labels and store as tuple.
             # Store the subset in the dictionary with the ratio as the key
-            self.subsets[ratio] = subset_df
+            # self.subsets[ratio] = subset_df
+            self.subsets[ratio] = Dataset.split_feature_label(subset_df)
 
 
     @staticmethod
@@ -58,6 +60,12 @@ class Dataset:
         return fraud_count/num_rows
 
     def create_train_test(self, ratio, seed=None):
+        '''
+        Divides the data into train and test subsets.
+        :param ratio: The ratio between training set and test set
+        :param seed: seed for random splitting
+        '''
+
         num_rows = self.data.shape[0]
         shuffled_indices = list(range(num_rows))
         if seed:
@@ -70,9 +78,30 @@ class Dataset:
         self.train_data = self.data.iloc[train_indices]
         self.test_data = self.data.iloc[test_indices]
 
-    def create_train_test_set_fraud(self, ratio, fraud_data_ratio, seed=None):
-        fraud_data = self.data[self.data['Class'] == 1]
-        legit_data = self.data[self.data['Class'] == 0]
+    @staticmethod
+    def split_feature_label(dataframe, label="Class"):
+        '''
+
+        :param dataframe: The dataframe to split between features and label
+        :param label: the name of the label column in the dataframe
+        :return: a dataframe of features and another of the frame.
+        '''
+        label_df = dataframe.loc[:, label]
+        features = dataframe.drop(label, axis=1, inplace=False)
+        return features, label_df
+
+    def create_train_test_set_fraud(self, fraud_data_ratio, test_data_ratio, seed=None):
+        '''
+        Creates the train and test subsets. Mostly useful for imbalanced datasets.
+        :param fraud_data_ratio: Ratio of distribution of fraud data between training and test set
+        :param test_data_ratio: Ratio of fraud data inside the test set
+        :param seed: seed for random splitting
+
+        '''
+        shuffle_data = self.data.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+        fraud_data = shuffle_data [shuffle_data ['Class'] == 1]
+        legit_data = shuffle_data [shuffle_data ['Class'] == 0]
 
         #split fraud data
         rows_fraud = fraud_data.shape[0]
@@ -80,15 +109,16 @@ class Dataset:
         fraud_data_train = fraud_data.iloc[:fraud_data_train_rows]
         fraud_data_test = fraud_data.iloc[fraud_data_train_rows:]
 
-        #split non-fraud
-        rows_legit = legit_data.shape[0]
-        legit_data_train_rows = int(rows_legit * ratio)
-        legit_data_train = legit_data.iloc[:legit_data_train_rows]
-        legit_data_test = legit_data.iloc[legit_data_train_rows:]
+        #split non-fraud,but set a particular ratio for test data
+        rows_fraud_test = fraud_data_test.shape[0]
+        rows_legit_test = int((rows_fraud_test/test_data_ratio) - rows_fraud_test)
+        legit_data_train = legit_data.iloc[rows_legit_test:]
+        legit_data_test = legit_data.iloc[:rows_legit_test]
 
         # Combine both
         train_data_sorted = pd.concat([fraud_data_train, legit_data_train])
         test_data_sorted = pd.concat([fraud_data_test, legit_data_test])
+        test_fraud_rate = Dataset.define_fraud_rate(test_data_sorted)
 
         # Shuffle the datasets
         self.train_data = train_data_sorted.sample(frac=1, random_state=seed).reset_index(drop=True)
@@ -96,6 +126,11 @@ class Dataset:
 
 
     def define_label_features(self, label, features=None):
+        '''
+        Divides the data into features and labels for the whole training set.
+        :param label: name of the label column
+        :param features: names of the features column
+        '''
         self.train_label = self.train_data.loc[:,label]
         self.test_label = self.test_data.loc[:,label]
         if features: # if we want to test specific features
@@ -106,6 +141,11 @@ class Dataset:
             self.test_features = self.test_data.drop(label, axis=1, inplace=False)
 
     def reduce_test_data_ratio(self, ratio, seed=None):
+        '''
+
+        :param ratio: the ratio of fraud data desired in the test set
+        :param seed: seed for random splitting
+        '''
         if self.test_data is None:
             print("No test data")
             return
@@ -123,6 +163,8 @@ class Dataset:
         fraud_desired = int((ratio / (1-ratio)) * len(non_fraud_data))
 
         new_fraud_data = resample(fraud_data, replace=False, n_samples=fraud_desired, random_state=seed)
+
+        print(f"new fraud date number: {new_fraud_data.shape[0]}")
 
         new_test_data = pd.concat([new_fraud_data, non_fraud_data])
         new_test_data = new_test_data.sample(frac=1, random_state=seed).reset_index(drop=True)
