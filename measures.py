@@ -18,7 +18,10 @@ def measures(y_true, y_pred, y_prob):
     specificity = tn / (tn + fp)
 
     # 5. Precision
-    precision = precision_score(y_true, y_pred)  # TP / (TP + FP)
+    if (tp + fp) == 0:
+        precision = 0
+    else:
+        precision = precision_score(y_true, y_pred)  # TP / (TP + FP)
 
     # 6. F-measure (F1 Score)
     f_measure = f1_score(y_true, y_pred)
