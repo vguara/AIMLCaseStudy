@@ -142,8 +142,26 @@ def calculate_fraud_capture_rate(y_true, y_prob, threshold):
 
 
 def plot_performance(performance, ratios):
+    """
+    Plots performance metrics of models across data subsets.
+
+    :param performance: dict
+        A dictionary where keys are model names ('LR', 'SVM', 'RF') and values are
+        dictionaries of performance metrics (e.g., 'specificity', 'sensitivity',
+        'precision', 'AUC', 'F1', 'G-mean', 'weighted_accuracy', 'accuracy'),
+        each containing a list of values for different data subsets.
+
+    :param ratios: list
+        A list of data subset ratios (e.g., [0.02, 0.05, 0.1, 0.15]) corresponding to
+        different data frames (DF1, DF2, DF3, DF4) in the plot.
+
+    :return: None
+        Displays a grid of subplots showing the performance of each model across all
+        available metrics dynamically. The number of subplots adjusts based on the
+        number of metrics, and any unused subplots are hidden.
+    """
     # Sort the ratios to ensure correct plotting order
-    ratios, labels = zip(*sorted(zip(ratios, ["DF1", "DF2", "DF3", "DF4"])))
+    ratios = sorted(ratios)
 
     metrics = ['accuracy', 'specificity', 'sensitivity', 'precision', 'AUC', 'F', 'G-mean', 'wtdAcc']
 
@@ -163,17 +181,13 @@ def plot_performance(performance, ratios):
         row, col = divmod(idx, 2)
         for model in performance:
             marker_style = 's' if model == 'RF' else ('o' if model == 'SVM' else '^')
-            # Debug print to ensure data is being plotted in the correct order
-            print(f"Plotting {metric} for {model} with ratios: {ratios}")
-            print(f"Performance data: {performance[model][metric]}")
-
             axs[row, col].plot(ratios, performance[model][metric], label=model, marker=marker_style,
                                color=colour_map[model])
 
         axs[row, col].set_title(metric)
         axs[row, col].legend(loc='best')
         axs[row, col].set_xticks(ratios)
-        axs[row, col].set_xticklabels(labels)
+        axs[row, col].set_xticklabels(["DF1", "DF2", "DF3", "DF4"])
         axs[row, col].grid(True)
 
     # Hide any unused subplots
@@ -198,6 +212,9 @@ def plot_fraud_capture_rate(performance, ratios):
     :return: None
         Displays a grid of subplots showing the fraud capture rates of each model.
     """
+    # Sort the ratios to ensure correct plotting order
+    ratios = sorted(ratios)
+
     capture_rates = ['fraud_capture_rate_1_percent', 'fraud_capture_rate_10_percent', 'fraud_capture_rate_30_percent']
     num_rates = len(capture_rates)
     rows = (num_rates + 1) // 2  # Calculate rows needed (2 rates per row)
