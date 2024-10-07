@@ -142,29 +142,13 @@ def calculate_fraud_capture_rate(y_true, y_prob, threshold):
 
 
 def plot_performance(performance, ratios):
-    """
-    Plots performance metrics of models across data subsets.
+    # Sort the ratios to ensure correct plotting order
+    ratios, labels = zip(*sorted(zip(ratios, ["DF1", "DF2", "DF3", "DF4"])))
 
-    :param performance: dict
-        A dictionary where keys are model names ('LR', 'SVM', 'RF') and values are
-        dictionaries of performance metrics (e.g., 'specificity', 'sensitivity',
-        'precision', 'AUC', 'F1', 'G-mean', 'weighted_accuracy', 'accuracy'),
-        each containing a list of values for different data subsets.
-
-    :param ratios: list
-        A list of data subset ratios (e.g., [0.02, 0.05, 0.1, 0.15]) corresponding to
-        different data frames (DF1, DF2, DF3, DF4) in the plot.
-
-    :return: None
-        Displays a grid of subplots showing the performance of each model across all
-        available metrics dynamically. The number of subplots adjusts based on the
-        number of metrics, and any unused subplots are hidden.
-    """
     metrics = ['accuracy', 'specificity', 'sensitivity', 'precision', 'AUC', 'F', 'G-mean', 'wtdAcc']
 
-    # Create a figure with subplots
     num_metrics = len(metrics)
-    rows = (num_metrics + 1) // 2  # Calculate rows needed (2 metrics per row)
+    rows = (num_metrics + 1) // 2
     fig, axs = plt.subplots(rows, 2, figsize=(10, 4 * rows))
     fig.tight_layout(pad=5.0)
 
@@ -179,13 +163,17 @@ def plot_performance(performance, ratios):
         row, col = divmod(idx, 2)
         for model in performance:
             marker_style = 's' if model == 'RF' else ('o' if model == 'SVM' else '^')
+            # Debug print to ensure data is being plotted in the correct order
+            print(f"Plotting {metric} for {model} with ratios: {ratios}")
+            print(f"Performance data: {performance[model][metric]}")
+
             axs[row, col].plot(ratios, performance[model][metric], label=model, marker=marker_style,
                                color=colour_map[model])
 
         axs[row, col].set_title(metric)
         axs[row, col].legend(loc='best')
         axs[row, col].set_xticks(ratios)
-        axs[row, col].set_xticklabels(["DF1", "DF2", "DF3", "DF4"])
+        axs[row, col].set_xticklabels(labels)
         axs[row, col].grid(True)
 
     # Hide any unused subplots

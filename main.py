@@ -27,7 +27,7 @@ def main():
 
     ds.define_label_features(label="Class")
 
-    ratios = [0.02, 0.05, 0.1, 0.15]
+    ratios = [0.15, 0.1, 0.05, 0.02]
     ds.create_subsets(ratios=ratios, seed=456)
 
     X_test, y_test = ds.test_features, ds.test_label
