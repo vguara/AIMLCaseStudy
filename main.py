@@ -1,60 +1,54 @@
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
 from Dataset import Dataset
-from sklearn.ensemble import RandomForestClassifier
-from measures import measures
+from measures import train_and_evaluate_models, plot_performance, plot_fraud_capture_rate
+from sklearn.preprocessing import StandardScaler
 
 
-models = ['LR','SVM','RF']
-# models = ['SVM']
+def main():
+    """
+    Main function to execute the fraud detection model training and evaluation process.
 
-old_ds = "creditcard.csv"
-new_ds = "creditcard_2023.csv"
+    :return: None
+        The function does not return any value. It primarily performs I/O operations
+        and visualizes results.
+    """
+    models = ['LR', 'SVM', 'RF']
+    dataset_path = "creditcard.csv"
 
-ds = Dataset(old_ds)
+    ds = Dataset(dataset_path)
 
-# Seed defines a specific value for the randomness so to say
-# Basically if we use the same see, the same training and test sets will be created
-# This is useful to reproduce the same results
-# If we want a truly random data just run this without a seed (default is None)
+    # Create train and test sets based on fraud rate
+    if ds.fraud_rate < 0.1:
+        ds.create_train_test_set_fraud(fraud_data_ratio=0.3, test_data_ratio=0.005, seed=123)
+    else:
+        ds.create_train_test(ratio=0.7)
 
-if ds.fraud_rate < 0.1: #for the old dataset
-    ds.create_train_test_set_fraud(fraud_data_ratio=0.3, test_data_ratio=0.005,seed=123)
-else: #for the new dataset
-    ds.create_train_test(ratio=0.7)
+    if ds.fraud_rate > 0.1:
+        ds.reduce_test_data_ratio(0.005)
 
-if ds.fraud_rate > 0.1: #for the new data set, reducing the test data fraud rate to 0.5%
-    ds.reduce_test_data_ratio(0.005)
+    ds.define_label_features(label="Class")
 
-ds.define_label_features(label="Class")
+    ratios = [0.02, 0.05, 0.1, 0.15]
+    ds.create_subsets(ratios=ratios, seed=456)
 
-# 'Class' is how the fraud/legit binary is labeled in the dataset.
+    X_test, y_test = ds.test_features, ds.test_label
 
-ratios = [0.02, 0.05, 0.1, 0.15]
+    # Scale the features
+    scaler = StandardScaler()
+    ds.train_features = scaler.fit_transform(ds.train_features)  # Assuming ds has train_features
+    X_test = scaler.transform(X_test)
 
-ds.create_subsets(ratios=ratios,seed=456)
-X_test, y_test = ds.test_features, ds.test_label
-for ratio, subset in ds.subsets.items():
-    print(f"Subset {ratio}")
-    print(f"Subset size {len(subset[0])}")
+    metrics = ['accuracy', 'specificity', 'sensitivity', 'precision', 'AUC', 'F', 'G-mean', 'wtdAcc',
+               'fraud_capture_rate_1_percent', 'fraud_capture_rate_10_percent', 'fraud_capture_rate_30_percent']
 
-    X_train, y_train = subset[0],subset[1]
+    # Train and evaluate models
+    performance = train_and_evaluate_models(ds, models, metrics, X_test, y_test)
 
-    for model in models:
-        if model == 'LR':
-            model_trained = LogisticRegression(solver='liblinear')
-        elif model == 'SVM':
-            model_trained = SVC(kernel='rbf', C=1.0, gamma='scale',probability=True)
-        elif model == 'RF':
-            # Train a Random Forest model
-            model_trained = RandomForestClassifier(n_estimators=100, random_state=42)
+    # Call function to plot the performance
+    plot_performance(performance, ratios)
 
-        model_trained.fit(X_train, y_train)
+    # Plot the fraud capture rates
+    plot_fraud_capture_rate(performance, ratios)
 
-        # Make predictions and evaluate the model
-        y_pred = model_trained.predict(X_test)
-        y_prob = model_trained.predict_proba(X_test)[:, 1]
 
-        performance = measures(y_test, y_pred, y_prob)
-        print(performance)
-
+if __name__ == "__main__":
+    main()
