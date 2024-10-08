@@ -4,6 +4,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score,
                              recall_score, f1_score, roc_auc_score)
 import matplotlib.pyplot as plt
+from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 
@@ -96,8 +97,9 @@ def calculate_weighted_accuracy(tn, fp, fn, tp):
     :return: float
         Weighted accuracy value, calculated as a weighted sum of sensitivity and specificity.
     """
-    sensitivity = recall_score([1] * tp + [0] * fn, [1] * tp + [0] * fn)  # Correctly use true and predicted labels
-    specificity = calculate_specificity(tn, fp)
+    # sensitivity = recall_score([1] * tp + [0] * fn, [1] * tp + [0] * fn)  # Correctly use true and predicted labels
+    sensitivity = tp / (tp + fn) if (tp + fn) != 0 else 0
+    specificity = tn / (tn + fp) if (tn + fp) != 0 else 0
     return 0.7 * sensitivity + 0.3 * specificity
 
 
@@ -351,7 +353,14 @@ def train_model(model_name, X_train, y_train):
     if model_name == 'LR':
         model = LogisticRegression(max_iter=200)  # Increased max_iter for convergence
     elif model_name == 'SVM':
-        model = SVC(probability=True)
+        model = SVC(probability=True, kernel='rbf', gamma=0.1, C=10)
+
+        # grid_search = GridSearchCV(estimator=SVC(probability=True), param_grid={'C': [0.1, 1, 10]}, cv=5, scoring='sensitivity')
+        # grid_search.fit(X_train, y_train)
+        # best_params = grid_search.best_params_
+        # print(best_params)
+        # print(f"Best C value: {best_params['C']}")
+        # model = grid_search.best_estimator_
     elif model_name == 'RF':
         model = RandomForestClassifier()
     else:
