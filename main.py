@@ -12,7 +12,7 @@ def main():
         and visualizes results.
     """
     models = ['LR', 'SVM', 'RF']
-    dataset_path = "creditcard.csv"
+    dataset_path = "creditcard_2023.csv"
 
     ds = Dataset(dataset_path)
 
