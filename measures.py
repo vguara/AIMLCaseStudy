@@ -353,7 +353,8 @@ def train_model(model_name, X_train, y_train):
     if model_name == 'LR':
         model = LogisticRegression(max_iter=200)  # Increased max_iter for convergence
     elif model_name == 'SVM':
-        model = SVC(probability=True, kernel='rbf', gamma=0.1, C=10)
+        # model = SVC(probability=True, kernel='rbf', gamma=0.1, C=10)
+        model = SVC(probability=True)
 
         # grid_search = GridSearchCV(estimator=SVC(probability=True), param_grid={'C': [0.1, 1, 10]}, cv=5, scoring='sensitivity')
         # grid_search.fit(X_train, y_train)
