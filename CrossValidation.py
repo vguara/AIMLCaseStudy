@@ -1,3 +1,4 @@
+from fontTools.varLib.instancer import solver
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -18,7 +19,6 @@ def evaluate_models(models_with_params, cv, scoring, training_features, training
         )
 
         results.append({
-            'model': best_model,
             'params': best_params,
             'score': best_score
         })
@@ -29,7 +29,9 @@ def evaluate_models(models_with_params, cv, scoring, training_features, training
 dataset_path = "creditcard.csv"
 ds = Dataset(dataset_path)
 
-train_test_ratio = 0.7
+ds.drop_id_or_time()
+
+train_test_ratio = 1
 ds.create_train_test(ratio=train_test_ratio, seed=42)
 
 ds.define_label_features(label='Class')
@@ -38,15 +40,19 @@ X_train = ds.train_features
 y_train = ds.train_label
 
 models_with_params = [
-    (LogisticRegression(), {
-        'max_iter': [1000]
+    (LogisticRegression(max_iter=1000), {
+        'C': [0.1, 1, 10],
+        'solver': ['lbfgs','saga', 'newton-cg'],
+        'penalty': ['l1', 'l2', 'elasticnet', 'none'],
     }),
-    (SVC(), { # kernel is set to 'rbf' by default
-        'C': [0.1, 1]
-    }),
-    (RandomForestClassifier(), {
-        'n_estimators': [50, 100]
-    })
+    # (SVC(), { # kernel is set to 'rbf' by default
+    #     'C': [0.1, 1, 10],
+    #     'gamma': ['scale', 0.00000001, 0.0000001],
+    # }),
+    # (RandomForestClassifier(), {
+    #     'n_estimators': [50, 100, 200, 300],
+    #     'max_depth': [None, 10, 20, 30],
+    # })
 ]
 
 results = evaluate_models(
@@ -58,7 +64,7 @@ results = evaluate_models(
 )
 
 for result in results:
-    print("Best Model:", result['model'])
+    # print("Best Model:", result['model'])
     print("Best Parameters:", result['params'])
     print("Best Score:", result['score'])
     print("---")
