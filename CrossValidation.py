@@ -23,6 +23,8 @@ def evaluate_models(models_with_params, cv, scoring, training_features, training
             'score': best_score
         })
 
+        print(model, param_grid)
+
     return results
 
 
@@ -36,6 +38,9 @@ ds.define_label_features(label='Class')
 
 X_train = ds.train_features
 y_train = ds.train_label
+
+print(X_train)
+print(y_train)
 
 models_with_params = [
     (LogisticRegression(), {
