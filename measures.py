@@ -320,9 +320,12 @@ def train_and_evaluate_models(ds, models, metrics, X_test, y_test):
             y_pred = model_trained.predict(X_test_scaled)
             y_prob = model_trained.predict_proba(X_test_scaled)[:, 1]
 
+            # Store predictions
+            performance[model]['y_pred'] = y_pred
+
             # Get the performance metrics
             results = measures(y_test, y_pred, y_prob)
-            print(results)  # For debugging purposes
+            print(f"{model}: {results}")
 
             # Add the results to performance dictionary for each model
             for metric in metrics:
@@ -353,7 +356,9 @@ def train_model(model_name, X_train, y_train):
     if model_name == 'LR':
         model = LogisticRegression(max_iter=200)  # Increased max_iter for convergence
     elif model_name == 'SVM':
-        model = SVC(probability=True, kernel='rbf', gamma=0.0000001, C=10)
+        model = SVC(probability=True)
+
+        # model = SVC(probability=True, kernel='rbf', gamma=0.0000001, C=10)
 
         # grid_search = GridSearchCV(estimator=SVC(probability=True), param_grid={'C': [0.1, 1, 10]}, cv=5, scoring='sensitivity')
         # grid_search.fit(X_train, y_train)

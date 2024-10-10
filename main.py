@@ -1,3 +1,5 @@
+from sklearn.metrics import confusion_matrix
+
 from Dataset import Dataset
 from measures import train_and_evaluate_models, plot_performance, plot_fraud_capture_rate
 from sklearn.preprocessing import StandardScaler
@@ -12,7 +14,8 @@ def main():
         and visualizes results.
     """
     models = ['LR', 'SVM', 'RF']
-    dataset_path = "creditcard_2023.csv"
+    dataset_path = "creditcard.csv"
+    # dataset_path = "creditcard_2023.csv"
 
     ds = Dataset(dataset_path)
 
@@ -42,6 +45,12 @@ def main():
 
     # Train and evaluate models
     performance = train_and_evaluate_models(ds, models, metrics, X_test, y_test)
+
+    # Print confusion matrix for each model
+    for model in models:
+        y_pred = performance[model]['y_pred']
+        cm = confusion_matrix(y_test, y_pred)
+        print(f"Confusion Matrix for {model}:\n{cm}")
 
     # Call function to plot the performance
     plot_performance(performance, ratios)
