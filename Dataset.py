@@ -15,10 +15,28 @@ class Dataset:
         self.ratio = None
 
     def drop_id_or_time(self):
+        """
+        Remove 'Time' from the old dataset and id from the new one in order to make them comparable.
+        """
         if self.fraud_rate > 0.1:
             self.data = self.data.drop('id', axis=1)
         else:
             self.data = self.data.drop('Time', axis=1)
+
+    def reduce_data_set(self, ratio, data="Full"):
+        if data == "Full":
+            nrows = int(self.data.shape[0] * ratio)
+            self.data = self.data.iloc[:nrows]
+        elif data == "Train":
+            nrows = int(self.train_data.shape[0] * ratio)
+            self.train_data = self.train_data.iloc[:nrows]
+        elif data == "Test":
+            nrows = int(self.test_data.shape[0] * ratio)
+            self.test_data = self.test_data.iloc[:nrows]
+        else:
+            print("Invalid data")
+
+
 
     def create_subsets(self, ratios, seed=None):
         '''
@@ -187,32 +205,9 @@ class Dataset:
         new_test_data = pd.concat([new_fraud_data, non_fraud_data])
         new_test_data = new_test_data.sample(frac=1, random_state=seed).reset_index(drop=True)
         self.test_data = new_test_data
-        new_ratio = len(new_fraud_data)/len(self.test_data)
 
 
 
-
-    # def create_cross_validation_subsets(self, k=5, keep_fraud_ratio=False):
-    #
-    #     if not keep_fraud_ratio:
-    #         for ratio, df in self.subsets.items():
-    #             total_rows = df.shape[0]
-    #             rows_k = int(total_rows/k)
-    #             self.validation_sets[ratio] = []
-    #             for j in range(0, total_rows, rows_k):
-    #                 df_split = df.iloc[j:j+rows_k]
-    #                 self.validation_sets[ratio].append(df_split)
-    #     else:
-    #         for ratio, df in self.subsets.items():
-    #             fraud_cases = df[df['Class'] == 1]
-    #             non_fraud_cases = df[df['Class'] == 0]
-    #             total_rows = non_fraud_cases.shape[0]
-    #             rows_k = int(total_rows/k)
-    #             self.validation_sets[ratio] = []
-    #             for j in range(0, total_rows, rows_k):
-    #                 non_fraud_df_split = non_fraud_cases.iloc[j:j+rows_k]
-    #                 df_concat = pd.concat([non_fraud_df_split, fraud_cases])
-    #                 self.validation_sets[ratio].append(df_concat)
 
 
 
