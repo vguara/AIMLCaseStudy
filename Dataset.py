@@ -12,6 +12,31 @@ class Dataset:
         # self.validation_sets = {}
         self.train_data = None
         self.test_data = None
+        self.ratio = None
+
+    def drop_id_or_time(self):
+        """
+        Remove 'Time' from the old dataset and id from the new one in order to make them comparable.
+        """
+        if self.fraud_rate > 0.1:
+            self.data = self.data.drop('id', axis=1)
+        else:
+            self.data = self.data.drop('Time', axis=1)
+
+    def reduce_data_set(self, ratio, data="Full"):
+        if data == "Full":
+            nrows = int(self.data.shape[0] * ratio)
+            self.data = self.data.iloc[:nrows]
+        elif data == "Train":
+            nrows = int(self.train_data.shape[0] * ratio)
+            self.train_data = self.train_data.iloc[:nrows]
+        elif data == "Test":
+            nrows = int(self.test_data.shape[0] * ratio)
+            self.test_data = self.test_data.iloc[:nrows]
+        else:
+            print("Invalid data")
+
+
 
     def create_subsets(self, ratios, seed=None):
         '''
@@ -52,7 +77,7 @@ class Dataset:
     @staticmethod
     def define_fraud_rate(data):
         # Define the fraud rate of a dataset
-        # can be used for the whole dataset or for each 
+        # can be used for the whole dataset or for each
 
         num_rows = data.shape[0]
         label = data['Class']
@@ -66,17 +91,23 @@ class Dataset:
         :param seed: seed for random splitting
         '''
 
-        num_rows = self.data.shape[0]
-        shuffled_indices = list(range(num_rows))
-        if seed:
-            random.seed(seed)
-        random.shuffle(shuffled_indices)
-        self.train_set_size = int(num_rows * ratio)
-        train_indices = shuffled_indices[:self.train_set_size]
-        test_indices = shuffled_indices[self.train_set_size:]
-        random.seed()  # resetting the seed after shuffling
-        self.train_data = self.data.iloc[train_indices]
-        self.test_data = self.data.iloc[test_indices]
+        self.ratio = ratio
+        if 0 < ratio < 1:
+            num_rows = self.data.shape[0]
+            shuffled_indices = list(range(num_rows))
+            if seed:
+                random.seed(seed)
+            random.shuffle(shuffled_indices)
+            self.train_set_size = int(num_rows * ratio)
+            train_indices = shuffled_indices[:self.train_set_size]
+            test_indices = shuffled_indices[self.train_set_size:]
+            random.seed()  # resetting the seed after shuffling
+            self.train_data = self.data.iloc[train_indices]
+            self.test_data = self.data.iloc[test_indices]
+        elif ratio == 0:
+            self.test_data = self.data
+        else:
+            self.train_data = self.data
 
     @staticmethod
     def split_feature_label(dataframe, label="Class"):
@@ -131,14 +162,20 @@ class Dataset:
         :param label: name of the label column
         :param features: names of the features column
         '''
-        self.train_label = self.train_data.loc[:,label]
-        self.test_label = self.test_data.loc[:,label]
-        if features: # if we want to test specific features
-            self.train_features = self.train_data.loc[:,features]
-            self.test_features = self.test_data.loc[:,features]
-        else: # otherwise all features included
-            self.train_features = self.train_data.drop(label, axis=1, inplace=False)
-            self.test_features = self.test_data.drop(label, axis=1, inplace=False)
+        if self.train_data is not None:
+            self.train_label = self.train_data.loc[:,label]
+
+            if features: # if we want to test specific features
+                self.train_features = self.train_data.loc[:,features]
+            else: # otherwise all features included
+                self.train_features = self.train_data.drop(label, axis=1, inplace=False)
+
+        if self.test_data is not None:
+            self.test_label = self.test_data.loc[:, label]
+            if features:
+                self.test_features = self.test_data.loc[:, features]
+            else:
+                self.test_features = self.test_data.drop(label, axis=1, inplace=False)
 
     def reduce_test_data_ratio(self, ratio, seed=None):
         '''
@@ -164,38 +201,13 @@ class Dataset:
 
         new_fraud_data = resample(fraud_data, replace=False, n_samples=fraud_desired, random_state=seed)
 
-        print(f"new fraud date number: {new_fraud_data.shape[0]}")
 
         new_test_data = pd.concat([new_fraud_data, non_fraud_data])
         new_test_data = new_test_data.sample(frac=1, random_state=seed).reset_index(drop=True)
-        print(f"Old test data - fraud size: {len(fraud_data)}, ratio {current_ratio}")
         self.test_data = new_test_data
-        new_ratio = len(new_fraud_data)/len(self.test_data)
-        print(f"New test data - fraud size: {len(new_fraud_data)}, ratio {new_ratio}")
 
 
 
-    # def create_cross_validation_subsets(self, k=5, keep_fraud_ratio=False):
-    #
-    #     if not keep_fraud_ratio:
-    #         for ratio, df in self.subsets.items():
-    #             total_rows = df.shape[0]
-    #             rows_k = int(total_rows/k)
-    #             self.validation_sets[ratio] = []
-    #             for j in range(0, total_rows, rows_k):
-    #                 df_split = df.iloc[j:j+rows_k]
-    #                 self.validation_sets[ratio].append(df_split)
-    #     else:
-    #         for ratio, df in self.subsets.items():
-    #             fraud_cases = df[df['Class'] == 1]
-    #             non_fraud_cases = df[df['Class'] == 0]
-    #             total_rows = non_fraud_cases.shape[0]
-    #             rows_k = int(total_rows/k)
-    #             self.validation_sets[ratio] = []
-    #             for j in range(0, total_rows, rows_k):
-    #                 non_fraud_df_split = non_fraud_cases.iloc[j:j+rows_k]
-    #                 df_concat = pd.concat([non_fraud_df_split, fraud_cases])
-    #                 self.validation_sets[ratio].append(df_concat)
 
 
 
@@ -238,4 +250,3 @@ def find_best_model(model, param_grid, cv, scoring, training_features, training_
     best_score = grid_search.best_score_
 
     return best_model, best_params, best_score
-

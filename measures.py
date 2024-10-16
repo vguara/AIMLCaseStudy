@@ -1,10 +1,8 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score,
-                             recall_score, f1_score, roc_auc_score)
+from sklearn.metrics import (confusion_matrix, accuracy_score, recall_score, f1_score, precision_recall_curve, auc)
 import matplotlib.pyplot as plt
-from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 
@@ -28,6 +26,8 @@ def measures(y_true, y_pred, y_prob):
         weighted accuracy, AUC, and fraud capture rates at specified thresholds.
     """
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    conf_mat = [tn, fp, fn, tp]
+    precision, recall, thresholds = precision_recall_curve(y_true, y_pred)
 
     performance_metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
@@ -37,7 +37,8 @@ def measures(y_true, y_pred, y_prob):
         "f1_score": f1_score(y_true, y_pred),
         "g_mean": calculate_g_mean(recall_score(y_true, y_pred), calculate_specificity(tn, fp)),
         "wtd_acc": calculate_weighted_accuracy(tn, fp, fn, tp),
-        "auc": roc_auc_score(y_true, y_prob),
+        "auc": auc(recall, precision),
+        "Confusion Matrix": conf_mat,
         "fraud_capture_rate_1_percent": calculate_fraud_capture_rate(y_true, y_prob, 0.01),
         "fraud_capture_rate_10_percent": calculate_fraud_capture_rate(y_true, y_prob, 0.10),
         "fraud_capture_rate_30_percent": calculate_fraud_capture_rate(y_true, y_prob, 0.30),
@@ -97,7 +98,6 @@ def calculate_weighted_accuracy(tn, fp, fn, tp):
     :return: float
         Weighted accuracy value, calculated as a weighted sum of sensitivity and specificity.
     """
-    # sensitivity = recall_score([1] * tp + [0] * fn, [1] * tp + [0] * fn)  # Correctly use true and predicted labels
     sensitivity = tp / (tp + fn) if (tp + fn) != 0 else 0
     specificity = tn / (tn + fp) if (tn + fp) != 0 else 0
     return 0.7 * sensitivity + 0.3 * specificity
@@ -190,6 +190,7 @@ def plot_performance(performance, ratios):
         axs[row, col].legend(loc='best')
         axs[row, col].set_xticks(ratios)
         axs[row, col].set_xticklabels(["DF1", "DF2", "DF3", "DF4"])
+        # axs[row, col].set_ylim(0.8, 1)
         axs[row, col].grid(True)
 
     # Hide any unused subplots
@@ -234,7 +235,8 @@ def plot_fraud_capture_rate(performance, ratios):
     for idx, rate in enumerate(capture_rates):
         row, col = divmod(idx, 2)
         for model in performance:
-            axs[row, col].plot(ratios, performance[model][rate], label=model, marker='o',
+            marker_style = 's' if model == 'RF' else ('o' if model == 'SVM' else '^')
+            axs[row, col].plot(ratios, performance[model][rate], label=model, marker=marker_style,
                                color=colour_map[model])
 
         percentage = rate.split('_')[-2]
@@ -288,8 +290,7 @@ def train_and_evaluate_models(ds, models, metrics, X_test, y_test):
         True labels corresponding to the test data.
 
     :return: dict
-        A dictionary containing performance metrics for each model across different
-        subsets.
+        A dictionary containing performance metrics for each model across different subsets.
     """
     performance = initialize_performance_dict(models, metrics)
     metric_key_mapping = {
@@ -313,10 +314,15 @@ def train_and_evaluate_models(ds, models, metrics, X_test, y_test):
         X_train, y_train = subset[0], subset[1]
 
         for model in models:
-            model_trained = train_model(model, X_train, y_train)
+            if model == 'SVM':
+                model_trained, scaler = train_model(model, X_train, y_train)
+                # Scale the test set using the same scaler
+                X_test_scaled = scaler.transform(X_test)
+            else:
+                model_trained = train_model(model, X_train, y_train)
+                X_test_scaled = X_test  # No scaling for other models
 
             # Make predictions and evaluate the model
-            X_test_scaled = StandardScaler().fit_transform(X_test)  # Scale test data
             y_pred = model_trained.predict(X_test_scaled)
             y_prob = model_trained.predict_proba(X_test_scaled)[:, 1]
 
@@ -339,7 +345,7 @@ def train_and_evaluate_models(ds, models, metrics, X_test, y_test):
 
 def train_model(model_name, X_train, y_train):
     """
-    Trains a model based on the model name.
+    Trains a model based on the model name, applying scaling only for SVM.
 
     :param model_name: str
         The name of the model to train ('LR', 'SVM', 'RF').
@@ -354,26 +360,22 @@ def train_model(model_name, X_train, y_train):
         The trained model.
     """
     if model_name == 'LR':
-        model = LogisticRegression(max_iter=200)  # Increased max_iter for convergence
+        model = LogisticRegression(max_iter=10000, C=0.1, penalty='l2')
+
     elif model_name == 'SVM':
-        model = SVC(probability=True)
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        model = SVC(probability=True, C=0.1, gamma='scale')
+        model.fit(X_train_scaled, y_train)
+        return model, scaler
 
-        # model = SVC(probability=True, kernel='rbf', gamma=0.0000001, C=10)
-
-        # grid_search = GridSearchCV(estimator=SVC(probability=True), param_grid={'C': [0.1, 1, 10]}, cv=5, scoring='sensitivity')
-        # grid_search.fit(X_train, y_train)
-        # best_params = grid_search.best_params_
-        # print(best_params)
-        # print(f"Best C value: {best_params['C']}")
-        # model = grid_search.best_estimator_
     elif model_name == 'RF':
-        model = RandomForestClassifier()
+        model = RandomForestClassifier(max_depth=None, n_estimators=200)
+
     else:
         raise ValueError("Model not recognized")
 
-    # Scale data for better convergence
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-
-    model.fit(X_train_scaled, y_train)
+    # Train the model without scaling
+    model.fit(X_train, y_train)
     return model
+

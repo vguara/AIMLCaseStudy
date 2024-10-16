@@ -1,8 +1,6 @@
 from sklearn.metrics import confusion_matrix
-
 from Dataset import Dataset
 from measures import train_and_evaluate_models, plot_performance, plot_fraud_capture_rate
-from sklearn.preprocessing import StandardScaler
 
 
 def main():
@@ -14,37 +12,39 @@ def main():
         and visualizes results.
     """
     models = ['LR', 'SVM', 'RF']
-    dataset_path = "creditcard.csv"
-    # dataset_path = "creditcard_2023.csv"
+    is_old = True
 
-    ds = Dataset(dataset_path)
+    # Dataset selection
+    data_path = "creditcard.csv" if is_old else "creditcard_2023.csv"
+    dataset = Dataset(data_path)
 
-    # Create train and test sets based on fraud rate
-    if ds.fraud_rate < 0.1:
-        ds.create_train_test_set_fraud(fraud_data_ratio=0.3, test_data_ratio=0.005, seed=123)
+    # Process the dataset
+    if is_old:
+        # For old dataset: use fraud-specific train/test split
+        dataset.create_train_test_set_fraud(0.7, 0.005)
     else:
-        ds.create_train_test(ratio=0.7)
+        # For new dataset: drop ID/time columns, split, and reduce data
+        dataset.drop_id_or_time()
+        dataset.create_train_test(0.7, seed=42)
+        dataset.reduce_data_set(0.12, "Train")
+        dataset.reduce_test_data_ratio(0.005)
 
-    if ds.fraud_rate > 0.1:
-        ds.reduce_test_data_ratio(0.005)
+    # Define the label and features
+    dataset.define_label_features(label="Class")
 
-    ds.define_label_features(label="Class")
-
+    # Create subsets with specified ratios
     ratios = [0.15, 0.1, 0.05, 0.02]
-    ds.create_subsets(ratios=ratios, seed=456)
+    dataset.create_subsets(ratios=ratios, seed=456)
 
-    X_test, y_test = ds.test_features, ds.test_label
+    # Extract test data
+    X_test, y_test = dataset.test_features, dataset.test_label
 
-    # Scale the features
-    scaler = StandardScaler()
-    ds.train_features = scaler.fit_transform(ds.train_features)  # Assuming ds has train_features
-    X_test = scaler.transform(X_test)
-
+    # Performance metrics to evaluate
     metrics = ['accuracy', 'specificity', 'sensitivity', 'precision', 'AUC', 'F', 'G-mean', 'wtdAcc',
                'fraud_capture_rate_1_percent', 'fraud_capture_rate_10_percent', 'fraud_capture_rate_30_percent']
 
     # Train and evaluate models
-    performance = train_and_evaluate_models(ds, models, metrics, X_test, y_test)
+    performance = train_and_evaluate_models(dataset, models, metrics, X_test, y_test)
 
     # Print confusion matrix for each model
     for model in models:
@@ -52,11 +52,12 @@ def main():
         cm = confusion_matrix(y_test, y_pred)
         print(f"Confusion Matrix for {model}:\n{cm}")
 
-    # Call function to plot the performance
+    # Plot the performance
     plot_performance(performance, ratios)
 
-    # Plot the fraud capture rates
-    plot_fraud_capture_rate(performance, ratios)
+    # Plot fraud capture rates only for the old dataset
+    if is_old:
+        plot_fraud_capture_rate(performance, ratios)
 
 
 if __name__ == "__main__":
