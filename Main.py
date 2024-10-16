@@ -1,6 +1,6 @@
 from sklearn.metrics import confusion_matrix
 from Dataset import Dataset
-from measures import train_and_evaluate_models, plot_performance, plot_fraud_capture_rate
+from Measures import train_and_evaluate_models, plot_performance, plot_fraud_capture_rate
 
 
 def main():
