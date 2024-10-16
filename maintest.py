@@ -29,8 +29,8 @@ def main():
     # Mark 1 as test and the other as train
     if not old:
         dstrain.drop_id_or_time()
-        dstrain.create_train_test(0.7, 42)
-        dstrain.reduce_data_set(0.12, "Train")
+        dstrain.create_train_test(0.6, 42)
+        dstrain.reduce_data_set(0.25, "Train")
         dstrain.reduce_test_data_ratio(0.005)
     else:
         dstrain.create_train_test_set_fraud(0.7, 0.005)

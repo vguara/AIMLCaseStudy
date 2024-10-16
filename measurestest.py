@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score,
-                             recall_score, f1_score, roc_auc_score)
+                             recall_score, f1_score, roc_auc_score, precision_recall_curve, auc)
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
@@ -29,6 +29,7 @@ def measures(y_true, y_pred, y_prob, old_ds):
     """
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
     conf_mat = [tn, fp, fn, tp]
+    precision, recall, thresholds = precision_recall_curve(y_true, y_pred)
     performance_metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
         "sensitivity": recall_score(y_true, y_pred),
@@ -37,7 +38,7 @@ def measures(y_true, y_pred, y_prob, old_ds):
         "f1_score": f1_score(y_true, y_pred),
         "g_mean": calculate_g_mean(recall_score(y_true, y_pred), calculate_specificity(tn, fp)),
         "wtd_acc": calculate_weighted_accuracy(tn, fp, fn, tp),
-        "auc": roc_auc_score(y_true, y_prob),
+        "auc": auc(recall, precision),
         "Confusion Matrix": conf_mat
         # "fraud_capture_rate_1_percent": calculate_fraud_capture_rate(y_true, y_prob, 0.01),
         # "fraud_capture_rate_10_percent": calculate_fraud_capture_rate(y_true, y_prob, 0.10),
