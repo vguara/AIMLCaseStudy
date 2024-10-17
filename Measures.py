@@ -308,8 +308,8 @@ def train_and_evaluate_models(ds, models, metrics, X_test, y_test):
     }
 
     for ratio, subset in ds.subsets.items():
-        print(f"Subset {ratio}")
-        print(f"Subset size {len(subset[0])}")
+        print(f"\nFraud Rate: {int(ratio * 100):}%")
+        print(f"Subset Size: {len(subset[0])}")
 
         X_train, y_train = subset[0], subset[1]
 

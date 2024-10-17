@@ -1,4 +1,5 @@
 from sklearn.metrics import confusion_matrix
+import time
 from Dataset import Dataset
 from Measures import train_and_evaluate_models, plot_performance, plot_fraud_capture_rate
 
@@ -11,8 +12,10 @@ def main():
         The function does not return any value. It primarily performs I/O operations
         and visualizes results.
     """
+    start = time.time()
+
     models = ['LR', 'SVM', 'RF']
-    is_old = True
+    is_old = False
 
     # Dataset selection
     data_path = "creditcard.csv" if is_old else "creditcard_2023.csv"
@@ -26,7 +29,7 @@ def main():
         # For new dataset: drop ID/time columns, split, and reduce data
         dataset.drop_id_or_time()
         dataset.create_train_test(0.7, seed=42)
-        dataset.reduce_data_set(0.12, "Train")
+        dataset.reduce_data_set(0.05, "Train")
         dataset.reduce_test_data_ratio(0.005)
 
     # Define the label and features
@@ -50,7 +53,7 @@ def main():
     for model in models:
         y_pred = performance[model]['y_pred']
         cm = confusion_matrix(y_test, y_pred)
-        print(f"Confusion Matrix for {model}:\n{cm}")
+        print(f"\nConfusion Matrix for {model}:\n{cm}")
 
     # Plot the performance
     plot_performance(performance, ratios)
@@ -58,6 +61,8 @@ def main():
     # Plot fraud capture rates only for the old dataset
     if is_old:
         plot_fraud_capture_rate(performance, ratios)
+
+    print(f"\nElapsed time: {time.time() - start:.2f} seconds")
 
 
 if __name__ == "__main__":
